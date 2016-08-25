@@ -90,7 +90,7 @@ always @(posedge clk or negedge rst_n)
       end
       default:begin
          data<=8'hzz;
-           rec_reg1<=1'b1;
+         rec_reg1<=1'b1;
          rec_reg2<=1'b1;
          end
   endcase

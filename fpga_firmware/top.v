@@ -66,29 +66,49 @@ module top(
 	wire [7:0] recevData;
 
 	//serial port
-  RS232 #(.BAUDRATE(9600)) btRemoter(
-	.clk(clk),
-	.rst_n(rst_n),
-	.txd(uart_tx),
-	.rxd(uart_rx),
-	.ena(sendTrigger),
-	.recevNotify(recevNotify),
-	.data(recevData));
+	async_receiver #(.ClkFrequency(50000000),.Baud(9600)) (.clk(clk), .RxD(uart_rx), .RxD_data_ready(recevNotify), .RxD_data(recevData));	
 	
+	reg [2:0] dataAssemablingState;
+	reg [15:0] steer, throttle;
+	reg newControlData;
+
 	always @ (posedge clk or posedge recevNotify or negedge rst_n) begin
+	if(!rst_n) begin
+		dataAssemablingState <= 0;
+	end
+	else begin
+		if(recevNotify) begin
+			case(dataAssemablingState)
+				3'd0:dataAssemablingState <= (recevData=="a")?3'd1:3'd0;
+				3'd1:dataAssemablingState <= (recevData=="b")?3'd2:3'd0;
+				3'd2:dataAssemablingState <= (recevData=="c")?3'd3:3'd0;
+				3'd3: begin steer[15:8] <= recevData; newControlData <= 1'b0; dataAssemablingState <= 3'd4; end
+				3'd4: begin steer[7:0] <= recevData; dataAssemablingState <= 3'd5; end
+				3'd5: begin throttle[15:8] <= recevData; dataAssemablingState <= 3'd6; end
+				3'd6: begin throttle[7:0] <= recevData; dataAssemablingState <= 3'd7; end
+				3'd7: begin newControlData <= 1'b1; dataAssemablingState <= 3'd0; end
+				endcase
+		end
+	end
+	end
+	always @ (posedge newControlData or negedge rst_n) begin
 	if(!rst_n) begin
 		servoDuty <= 16'd1500;
 		MotorDuty <= 0;
 	end
 	else begin
-		if(recevNotify) begin
-			case (recevData)
-				"w":MotorDuty <= 10000;
-				"s":MotorDuty <= 0;
-				"l":servoDuty <= 1000;
-				"c":servoDuty <= 1500;
-				"r":servoDuty <= 2000;
-			endcase
+		if(newControlData) begin
+			if(throttle > 512) begin
+					MotorA <= 1'b1;
+					MotorB <= 1'b0; 
+					MotorDuty <= {(throttle[12:0] - 13'd512),3'd0};
+				end
+				else begin
+					MotorA <= 1'b0;
+					MotorB <= 1'b1;
+					MotorDuty <= {(13'd512 - throttle[12:0]),3'd0};
+			end
+			servoDuty <= steer + 16'd1000;
 		end
 	end
 end
@@ -103,7 +123,7 @@ end
 //     2'b00:begin
 //       if(key1 === 1'b0) begin
 //         servoDutyKeyState <= 2'b01;
-//       end
+//       end/
 //     end
 //     //push triger
 //     2'b01:begin

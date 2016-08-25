@@ -15,11 +15,11 @@ reg [15:0] cnt;
 always@(posedge clk or negedge rst_n) begin
 if(!rst_n) begin
   cnt <= 16'd0;
-  pwmOut <= 1'b1;
+  pwmOut <= 1'b0;
 end
 else begin
 
-  if(cnt > duty) begin
+  if(cnt >= duty) begin
     pwmOut <= 1'b0;
   end
   else begin
