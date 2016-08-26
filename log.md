@@ -95,13 +95,9 @@ end
 结果:
 ### 下午
 加入了一个RS232模块，实现了串口接收数据。
+调试舵机和电机
 
 ## 0x03
-###上午
-调试舵机和电机
-###下午
-
-## 0x04
 ###上午
 添加蓝牙控制功能  
 整个上午都在写蓝牙控制的app，对接了原有app的stickView和蓝牙功能，中间找到stickView的一个bug。。。除此之外别无收获  
@@ -114,3 +110,32 @@ end
 然后就放上电调连上接收机跑了一圈，拔群！！！弄完才想起来这些跟小学期没一毛钱关系。
 ###晚上
 送走大神之后就开始调FPGA的串口，最后发现网上找的232模块误码率太高，换了一个瞬间好了。可以实现蓝牙控制了但是没有电机驱动，等PCB到了再试。
+
+##0x04
+###上午
+不知不觉就写了个bug。
+```
+always @ (posedge clk or recevNotify or negedge rst_n) begin
+if(!rst_n) begin
+  dataAssemablingState <= 0;
+end
+else begin
+  dataLED <= recevData;
+  if(recevNotify) begin
+    case(dataAssemablingState)
+      3'd0:begin dataAssemablingState <= (recevData=="a")?3'd1:3'd0; newControlDataW <=0; end
+      3'd1:begin dataAssemablingState <= (recevData=="b")?3'd2:3'd0; newControlDataW <=0; end
+      3'd2:begin dataAssemablingState <= (recevData=="c")?3'd3:3'd0; newControlDataW <=1; end
+      3'd3: begin steer[15:8] <= recevData; newControlData <= 1'b0; dataAssemablingState <= 3'd4; end
+      3'd4: begin steer[7:0] <= recevData; dataAssemablingState <= 3'd5; end
+      3'd5: begin throttle[15:8] <= recevData; dataAssemablingState <= 3'd6; end
+      3'd6: begin throttle[7:0] <= recevData; dataAssemablingState <= 3'd7; end
+      3'd7: begin newControlData <= 1'b1; dataAssemablingState <= 3'd0; end
+      default: begin dataAssemablingState <= 3'd0; end
+      endcase
+  end
+end
+end
+```
+由于串口接收的速率（即recevNotify的变化速率）小于clk，所以导致同一个数据读取多次。    
+调试通过

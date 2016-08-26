@@ -11,7 +11,8 @@ module top(
   clkOut,
   uart_tx,
   uart_rx,
-  dataLED
+  dataLED,
+  newControlDataW
   );
 
   input clk, rst_n, key1;
@@ -19,9 +20,10 @@ module top(
   output scl, MotorPWM, MotorA, MotorB, ServoPPM, clkOut;
   input uart_rx;
   output uart_tx;
-  output [7:0] dataLED;
+  output reg [7:0] dataLED;
+  output reg newControlDataW;
   
-  assign dataLED = recevData;
+//  assign dataLED = recevData;
   reg MotorA;
   reg MotorB;
 
@@ -72,21 +74,25 @@ module top(
 	reg [15:0] steer, throttle;
 	reg newControlData;
 
-	always @ (posedge clk or posedge recevNotify or negedge rst_n) begin
+//	assign newControlDataW = recevNotify;
+	
+	always @ (posedge recevNotify or negedge rst_n) begin
 	if(!rst_n) begin
 		dataAssemablingState <= 0;
 	end
 	else begin
+		dataLED <= recevData;
 		if(recevNotify) begin
 			case(dataAssemablingState)
-				3'd0:dataAssemablingState <= (recevData=="a")?3'd1:3'd0;
-				3'd1:dataAssemablingState <= (recevData=="b")?3'd2:3'd0;
-				3'd2:dataAssemablingState <= (recevData=="c")?3'd3:3'd0;
+				3'd0:begin dataAssemablingState <= (recevData=="a")?3'd1:3'd0; newControlDataW <=0; end
+				3'd1:begin dataAssemablingState <= (recevData=="b")?3'd2:3'd0; newControlDataW <=0; end
+				3'd2:begin dataAssemablingState <= (recevData=="c")?3'd3:3'd0; newControlDataW <=1; end
 				3'd3: begin steer[15:8] <= recevData; newControlData <= 1'b0; dataAssemablingState <= 3'd4; end
 				3'd4: begin steer[7:0] <= recevData; dataAssemablingState <= 3'd5; end
 				3'd5: begin throttle[15:8] <= recevData; dataAssemablingState <= 3'd6; end
 				3'd6: begin throttle[7:0] <= recevData; dataAssemablingState <= 3'd7; end
 				3'd7: begin newControlData <= 1'b1; dataAssemablingState <= 3'd0; end
+				default: begin dataAssemablingState <= 3'd0; end
 				endcase
 		end
 	end
