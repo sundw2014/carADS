@@ -65,10 +65,33 @@ Solution
 ## 0x02
 ### 上午
 今天开始正式写verilog了，写了一个PWM模块，并实例化出电机驱动和舵机驱动。
-问题：同步赋值和异步赋值出现在同一个always中，异步对性能的影响,比较一下两种赋值的rtl schematics？
-结果：
+问：同步赋值和异步赋值出现在同一个always中，异步对性能的影响,比较一下两种赋值的rtl schematics？   
+结果：比如下面的代码
+```
+always @ ( posedge clk_in or negedge rst_n ) begin
+  if(!rst_n) begin
+    clk_cnt <= 0;
+	 clk_out <= 0;
+  end
+  else begin
+ 	 clk_cnt = clk_cnt + 1;
 
-问题：分频时的问题，代码如下
+    if(clk_cnt < (N/2)) begin
+      clk_out <= 1'b1;
+    end
+    else begin
+      clk_out <= 1'b0;
+    end
+
+    if(clk_cnt > N ) begin
+      clk_cnt = 0;
+    end
+	end
+end
+```
+给clk_cnt同步加一的效果就是在下面判断clk_cnt是否大于N-2是用的是加一过的代码，这样的话，比如N是5，则clk_cnt的取值会有0,1,2,3,4,5;
+
+问：分频时的问题，代码如下
 ```
 always @ ( posedge clk_in or negedge rst_n ) begin
   if(!rst_n) begin
@@ -91,8 +114,20 @@ always @ ( posedge clk_in or negedge rst_n ) begin
 	end
 end
 ```
-为何需要减2
-结果:
+为何需要减2   
+结果:与上面类似，比如N=5，一个循环中N的取值为0,1,2,3,4,5,6且每个取值都持续了一个clk周期，所以就需要减2了。
+
+问：这段代码中出现了两处clk_cnt的赋值语句，怎么综合。   
+结果：查看了rtl schematics后发现编译器是按照
+```
+ if(clk_cnt > N-2 ) begin
+    clk_cnt <= 0;
+ end
+ else begin
+    clk_cnt <= clk_cnt + 1;
+ end
+ ```
+ 来综合的，这貌似改变了语义。但其实出现这样的代码说明我自己还是没能理解HDL，编译器帮我做了一些激进的但是极有可能正确的优化。__这是未定义的行为吗__？
 ### 下午
 加入了一个RS232模块，实现了串口接收数据。
 调试舵机和电机
