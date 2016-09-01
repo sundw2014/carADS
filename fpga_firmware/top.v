@@ -15,7 +15,8 @@ module top(
   dataLED,
   newControlDataW,
   accXdata,
-  angle_control
+  angle_control,
+  testICC
   );
 
   input clk, rst_n, key1;
@@ -25,8 +26,8 @@ module top(
   input uart_rx;
   output uart_tx;
   output reg [7:0] dataLED;
-  output wire newControlDataW;
-  output wire[32:0]accXdata;
+  output wire newControlDataW,testICC;
+  output wire[15:0]accXdata;
   input[15:0]angle_control;
 //  assign dataLED = recevData;
   reg MotorA;
@@ -67,7 +68,7 @@ module top(
     .period(16'd20000),//period 20ms
     .duty(servoDuty)//range is 500~2500, unit is us
   );
-   I2C u1(.clk(clk),.scl(scl),.sda(sda),.rst_n(rst_n),.LED(),.accXdata(accXdata));
+   I2C u1(.clk(clk),.scl(scl),.sda(sda),.rst_n(rst_n),.LED(testICC),.accXdata(accXdata));
 	reg sendTrigger;
 	wire recevNotify;
 	wire [7:0] recevData;
@@ -131,8 +132,8 @@ module top(
 		end
 		else begin
 			if(!controlMode) begin
-				//MotorDuty <= speed_control;
-				//servoDuty <= angle_control;
+				MotorDuty <= speed_control;
+				servoDuty <= angle_control;
 			end
 		end
 	end
