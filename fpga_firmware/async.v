@@ -1,15 +1,3 @@
-////////////////////////////////////////////////////////
-// RS-232 RX and TX module
-// (c) fpga4fun.com & KNJN LLC - 2003 to 2016
-
-// The RS-232 settings are fixed
-// TX: 8-bit data, 2 stop, no-parity
-// RX: 8-bit data, 1 stop, no-parity (the receiver can accept more stop bits of course)
-
-//`define SIMULATION   // in this mode, TX outputs one bit per clock cycle
-                       // and RX receives one bit per clock cycle (for fast simulations)
-
-////////////////////////////////////////////////////////
 module async_transmitter(
 	input clk,
 	input TxD_start,
@@ -119,7 +107,7 @@ always @(posedge clk)
 if(OversamplingTick)
 begin
 	if(RxD_sync[1]==1'b1 && Filter_cnt!=2'b11) Filter_cnt <= Filter_cnt + 1'd1;
-	else 
+	else
 	if(RxD_sync[1]==1'b0 && Filter_cnt!=2'b00) Filter_cnt <= Filter_cnt - 1'd1;
 
 	if(Filter_cnt==2'b11) RxD_bit <= 1'b1;
